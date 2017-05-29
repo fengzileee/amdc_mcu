@@ -15,6 +15,8 @@ const struct
  { 7, "u6" },               // btm sensor
  { 8, "u7" }};              // btm left sensor
 
+const char *IMU_TOPIC_NAME = "im";
+
 // time (in ms) to wait when requesting data from sensor
 const uint16_t i2c_timeout = 10;
 
@@ -37,7 +39,7 @@ void setup()
         devices[i]->advertise(nh);
     }
 
-    devices[7] = new imu('imu', i2c_timeout, 0);
+    devices[7] = new imu(IMU_TOPIC_NAME, i2c_timeout, 0);
 
 }
 
