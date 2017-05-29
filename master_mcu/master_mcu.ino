@@ -20,7 +20,7 @@ const uint16_t i2c_timeout = 10;
 
 ros::NodeHandle nh;
 
-i2c_device *devices[7];
+i2c_device *devices[8];
 
 void setup()
 {
@@ -36,6 +36,8 @@ void setup()
                                     ultrasonic_info[i].i2c_addr);
         devices[i]->advertise(nh);
     }
+
+    device[7] = new imu('imu', i2c_timeout, 0);
 
 }
 

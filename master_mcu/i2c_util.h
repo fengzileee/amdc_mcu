@@ -3,6 +3,8 @@
 
 #include <ros.h>
 #include <std_msgs/Int16.h>
+#include <std_msgs/Int16MultiArray.h>
+#include <LSM6.h>
 
 // Each slave device will be an i2c_device which provides 2 core functions:
 // 1. read()
@@ -62,9 +64,10 @@ class imu : public i2c_device
 {
     private:
         // TODO
-        //LSM6 imu_data;
-        //LIS3MDL mag;
+        LSM6 imu_data;
+        LIS3MDL mag;
         //LPS ps;
+        std_msgs::Int16MultiArray msg;
 
         //https://github.com/pololu/lsm6-arduino/blob/master/examples/Serial/Serial.ino
         //https://github.com/pololu/lis3mdl-arduino/blob/master/examples/Serial/Serial.ino
@@ -74,7 +77,24 @@ class imu : public i2c_device
         imu(const char *topic_name, uint16_t timeout, int addr)
             : i2c_device(topic_name, timeout, addr)
         {
-            //pub = new ros::Publisher(topic_name, &msg);
+            // initialization of msg
+            msg.layout.dim = (std_msgs::MultiArrayDimension *); 
+            malloc(sizeof(std_msgs::MultiArrayDimension)*2);
+            msg.layout.dim[0].label = "height";
+            msg.layout.dim[0].size = 9;
+            msg.layout.dim[0].stride = 1; 
+            msg.layout.data_offset = 0;
+            msg.data = (int *)malloc(sizeof(int)*8);
+            msg.data_length = 9;
+
+            // initialization of magnatometer and imu
+            imu_data.init();
+            mag.init();
+            imu_data.enableDefault();
+            mag.enableDefault();
+
+            // ROS publisher
+            pub = new ros::Publisher(topic_name, &msg);
         }
 
         void read();

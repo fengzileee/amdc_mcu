@@ -33,12 +33,27 @@ void ultrasonic::publish(ros::NodeHandle &nh)
 
 void imu::read()
 {
-    // TODO
+    /* msg.data sequence: accelerations of xyz, 
+       angular velocities around xyz, 
+       magnetometer readings around xyz
+    */
+    imu_data.read();
+    msg.data[0] = imu_data.a.x;
+    msg.data[1] = imu_data.a.y;
+    msg.data[2] = imu_data.a.z;
+    msg.data[3] = imu_data.g.x;
+    msg.data[4] = imu_data.g.y;
+    msg.data[5] = imu_data.g.z;
+
+    mag.read();
+    msg.data[6] = mag.m.x;
+    msg.data[7] = mag.m.y;
+    msg.data[8] = mag.m.z;
 }
 
 void imu::publish(ros::NodeHandle &nh)
 {
-    // TODO
+    pub -> publish(&msg);
 }
 
 void gps::read()
