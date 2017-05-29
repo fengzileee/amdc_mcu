@@ -37,7 +37,7 @@ void setup()
         devices[i]->advertise(nh);
     }
 
-    device[7] = new imu('imu', i2c_timeout, 0);
+    devices[7] = new imu('imu', i2c_timeout, 0);
 
 }
 
