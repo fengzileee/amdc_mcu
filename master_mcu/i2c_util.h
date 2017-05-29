@@ -5,6 +5,7 @@
 #include <std_msgs/Int16.h>
 #include <std_msgs/Int16MultiArray.h>
 #include <LSM6.h>
+#include <LIS3MDL.h>
 
 // Each slave device will be an i2c_device which provides 2 core functions:
 // 1. read()
