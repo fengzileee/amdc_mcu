@@ -85,7 +85,7 @@ class imu : public i2c_device
             msg.layout.dim[0].size = 9;
             msg.layout.dim[0].stride = 1; 
             msg.layout.data_offset = 0;
-            msg.data = (int *)malloc(sizeof(int)*8);
+            msg.data = (int *)malloc(sizeof(int)*9);
             msg.data_length = 9;
 
             // initialization of magnatometer and imu
