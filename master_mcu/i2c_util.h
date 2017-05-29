@@ -80,7 +80,7 @@ class imu : public i2c_device
         {
             // initialization of msg
             msg.layout.dim = (std_msgs::MultiArrayDimension *)
-            malloc(sizeof(std_msgs::MultiArrayDimension)*2);
+            malloc(sizeof(std_msgs::MultiArrayDimension));
             msg.layout.dim[0].label = "height";
             msg.layout.dim[0].size = 9;
             msg.layout.dim[0].stride = 1; 
