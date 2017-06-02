@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <ros.h>
 #include "i2c_util.h"
+#include <AltSoftSerial.h>
 
 // XXX
 // In order for the rosserial to work, I had to modify the following
@@ -27,14 +28,15 @@ const struct
  { 7, "u6" },               // btm sensor
  { 8, "u7" }};              // btm left sensor
 
-const char *IMU_TOPIC_NAME = "im";
+const char *IMU_TOPIC_NAME = "im", *GPS_TOPIC_NAME = "gp";
 
 // time (in ms) to wait when requesting data from sensor
 const uint16_t i2c_timeout = 10;
+AltSoftSerial gpsSerialPort(8,0); // RX, TX
 
 ros::NodeHandle nh;
 
-i2c_device *devices[8];
+i2c_device *devices[9];
 
 void setup()
 {
@@ -53,6 +55,9 @@ void setup()
 
     devices[7] = new imu(IMU_TOPIC_NAME, i2c_timeout, 0);
     devices[7]->advertise(nh);
+
+    devices[8] = new gps(GPS_TOPIC_NAME, i2c_timeout, 0, gpsSerialPort);
+    devices[8] -> advertise(nh);
 
 }
 

@@ -4,8 +4,11 @@
 #include <ros.h>
 #include <std_msgs/Int16.h>
 #include <std_msgs/Int16MultiArray.h>
-#include <LSM6.h>
-#include <LIS3MDL.h>
+#include <LSM6.h> // IMU
+#include <LIS3MDL.h> // Magnetometer
+#include <std_msgs/Float32MultiArray.h>
+#include <NMEAGPS.h>
+#include <AltSoftSerial.h>
 
 // Each slave device will be an i2c_device which provides 2 core functions:
 // 1. read()
@@ -104,16 +107,31 @@ class imu : public i2c_device
 
 class gps : public i2c_device
 {
-    // TODO
     private:
+        AltSoftSerial port;
+        NMEAGPS gps_data;
+        std_msgs::Float32MultiArray msg;
 
     public:
-        gps(const char *topic_name, uint16_t timeout, int addr)
+        gps(const char *topic_name, uint16_t timeout, int addr, AltSoftSerial gps_port)
             : i2c_device(topic_name, timeout, addr)
         {
-            //pub = new ros::Publisher(topic_name, &msg);
+            // ROS publisher
+            pub = new ros::Publisher(topic_name, &msg);
 
-            //msg.header.frame_id = frame_id;
+            // Soft Serial port for gps
+            port = gps_port;
+
+            // initialize ROS msg
+            // latitude, longitude, altitude, status, service
+            msg.layout.dim = (std_msgs::MultiArrayDimension *) 
+                malloc(sizeof(std_msgs::MultiArrayDimension));
+            msg.layout.dim[0].label = "height"; 
+            msg.layout.dim[0].size = 5;
+            msg.layout.dim[0].stride = 1;
+            msg.layout.data_offset = 0; 
+            msg.data = (float *) malloc(sizeof(float)*9);
+            msg.data_length = 5;
         }
 
         void read();
