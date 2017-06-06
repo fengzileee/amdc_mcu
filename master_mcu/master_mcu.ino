@@ -32,7 +32,15 @@ const char *IMU_TOPIC_NAME = "im", *GPS_TOPIC_NAME = "gp";
 
 // time (in ms) to wait when requesting data from sensor
 const uint16_t i2c_timeout = 10;
-AltSoftSerial gpsSerialPort(8,0); // RX, TX
+
+// Taken from library example:
+//
+// AltSoftSerial always uses these pins:
+//
+// Board          Transmit  Receive   PWM Unusable
+// -----          --------  -------   ------------
+// Arduino Uno        9         8         10
+AltSoftSerial gpsSerialPort;
 
 ros::NodeHandle nh;
 
