@@ -58,10 +58,22 @@ void imu::publish(ros::NodeHandle &nh)
 
 void gps::read()
 {
-    // TODO
+    if (gps_data.available(port))
+    {
+        gps_fix fix = gps_data.read();
+        msg.data[0] = fix.latitudeL();
+        msg.data[1] = fix.longitudeL();
+        msg.data[2] = fix.altitude();
+        msg.data[3] = 0;
+        msg.data[4] = 1;
+    }
+    else 
+    {
+        msg.data[3] = -1;
+    }
 }
 
 void gps::publish(ros::NodeHandle &nh)
 {
-    // TODO
+    pub -> publish(&msg);
 }
