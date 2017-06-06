@@ -1,7 +1,7 @@
 #ifndef i2c_util_H
 #define i2c_util_H
 
-#include <ros.h>
+#include "custom_ros.h"
 #include <std_msgs/Int16.h>
 #include <std_msgs/Int16MultiArray.h>
 #include <LSM6.h>
