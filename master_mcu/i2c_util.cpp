@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include <ros.h>
+#include "custom_ros.h"
 #include "i2c_util.h"
 
 void i2c_device::read_bytes(void *data, int bytes_to_read)

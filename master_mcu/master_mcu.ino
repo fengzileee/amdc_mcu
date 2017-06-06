@@ -1,19 +1,7 @@
 #include <Wire.h>
-#include <ros.h>
+#include "custom_ros.h"
 #include "i2c_util.h"
 #include <AltSoftSerial.h>
-
-// XXX
-// In order for the rosserial to work, I had to modify the following
-// in ros.h from:
-//
-// typedef NodeHandle_<ArduinoHardware, 25, 25, 280, 280> NodeHandle;
-//
-// to:
-//
-// typedef NodeHandle_<ArduinoHardware, 2, 10, 128, 128> NodeHandle;
-//
-// Still don't really understand what these number actually do..
 
 const struct
 {
