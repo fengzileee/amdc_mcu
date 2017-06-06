@@ -121,6 +121,7 @@ class gps : public i2c_device
 
             // Soft Serial port for gps
             port = gps_port;
+            port.begin(9600); // default baudrate of our GPS device
 
             // initialize ROS msg
             // latitude, longitude, altitude, status, service
