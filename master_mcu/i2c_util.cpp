@@ -61,9 +61,9 @@ void gps::read()
     if (gps_data.available(port))
     {
         gps_fix fix = gps_data.read();
-        msg.data[0] = fix.latitudeL();
-        msg.data[1] = fix.longitudeL();
-        msg.data[2] = fix.altitude();
+        msg.data[0] = fix.latitudeL(); // scaled by 10,000,000
+        msg.data[1] = fix.longitudeL(); // scaled by 10,000,000
+        msg.data[2] = fix.altitude_cm();
         msg.data[3] = 0;
         msg.data[4] = 1;
     }

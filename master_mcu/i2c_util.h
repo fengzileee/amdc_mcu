@@ -6,7 +6,7 @@
 #include <std_msgs/Int16MultiArray.h>
 #include <LSM6.h> // IMU
 #include <LIS3MDL.h> // Magnetometer
-#include <std_msgs/Float32MultiArray.h>
+#include <std_msgs/Int32MultiArray.h>
 #include <NMEAGPS.h>
 #include <AltSoftSerial.h>
 
@@ -110,7 +110,7 @@ class gps : public i2c_device
     private:
         AltSoftSerial port;
         NMEAGPS gps_data;
-        std_msgs::Float32MultiArray msg;
+        std_msgs::Int32MultiArray msg;
 
     public:
         gps(const char *topic_name, uint16_t timeout, int addr, AltSoftSerial gps_port)
@@ -130,7 +130,7 @@ class gps : public i2c_device
             msg.layout.dim[0].size = 5;
             msg.layout.dim[0].stride = 1;
             msg.layout.data_offset = 0; 
-            msg.data = (float *) malloc(sizeof(float)*9);
+            msg.data = (int32_t *) malloc(sizeof(int32_t)*5);
             msg.data_length = 5;
         }
 
