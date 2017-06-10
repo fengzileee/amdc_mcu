@@ -1,3 +1,5 @@
+#include <AltSoftSerial.h>
+
 #define PWM_LEFT_FORWARD  5
 #define PWM_LEFT_REVERSE  6
 #define ENABLE_LEFT       7
@@ -12,7 +14,7 @@
 #define RIGHT_FORWARD 'e'
 #define RIGHT_REVERSE 'd'
 #define RIGHT_TOGGLE  'c' // toggle between enable/disable
-#define INTERVAL 5
+#define INTERVAL 10
 
 #define MAX_SPD_LIMIT 230
 #define MIN_SPD_LIMIT -230
@@ -32,6 +34,21 @@ int left_reverse_pwm_control;
 int right_forward_pwm_control;
 int right_reverse_pwm_control;
 
+// AltSoftSerial always uses these pins:
+//
+// Board          Transmit  Receive   PWM Unusable
+// -----          --------  -------   ------------
+// Teensy 3.0 & 3.1  21        20         22
+// Teensy 2.0         9        10       (none)
+// Teensy++ 2.0      25         4       26, 27
+// Arduino Uno        9         8         10
+// Arduino Leonardo   5        13       (none)
+// Arduino Mega      46        48       44, 45
+// Wiring-S           5         6          4
+// Sanguino          13        14         12
+AltSoftSerial bt_serial;
+//HardwareSerial &bt_serial = Serial;
+
 void setup()
 {
     // Initialise everything and set to 0 speed
@@ -50,14 +67,18 @@ void setup()
     digitalWrite(ENABLE_LEFT, HIGH);
     digitalWrite(ENABLE_RIGHT, HIGH);
 
+    bt_serial.begin(9600);
+
+#ifdef DEBUG
     Serial.begin(9600);
+#endif
 }
 
 void loop()
 {
-    while (Serial.available())
+    while (bt_serial.available())
     {
-        int recv = Serial.read();
+        int recv = bt_serial.read();
         switch (recv)
         {
         case LEFT_FORWARD:
