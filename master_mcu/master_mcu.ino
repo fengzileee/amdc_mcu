@@ -1,22 +1,16 @@
 #include <Wire.h>
-#include "custom_ros.h"
 #include "i2c_util.h"
 #include <AltSoftSerial.h>
 
-const struct
-{
-    int         i2c_addr;
-    const char *topic_name;
-} ultrasonic_info[] =       // clockwise from left
-{{ 2, "u1" },               // left sensor
- { 3, "u2" },               // top left sensor
- { 4, "u3" },               // top right sensor
- { 5, "u4" },               // right sensor
- { 6, "u5" },               // btm right sensor
- { 7, "u6" },               // btm sensor
- { 8, "u7" }};              // btm left sensor
-
-const char *IMU_TOPIC_NAME = "im", *GPS_TOPIC_NAME = "gp";
+const int 
+ultrasonic_addr[] =  // clockwise from btm left
+{ 2,                 // btm left sensor
+  3,                 // left sensor
+  4,                 // top left sensor
+  5,                 // top sensor
+  6,                 // top right sensor
+  7,                 // right sensor
+  8 };               // btm right sensor
 
 // time (in ms) to wait when requesting data from sensor
 const uint16_t i2c_timeout = 10;
@@ -30,8 +24,6 @@ const uint16_t i2c_timeout = 10;
 // Arduino Uno        9         8         10
 AltSoftSerial gpsSerialPort;
 
-ros::NodeHandle nh;
-
 i2c_device *devices[9];
 
 void setup()
@@ -39,21 +31,19 @@ void setup()
     // join I2C bus as master
     Wire.begin();
 
-    nh.initNode();
+    Serial.begin(115200);
 
     for (int i = 0; i < 7; ++i)
     {
-        devices[i] = new ultrasonic(ultrasonic_info[i].topic_name,
-                                    i2c_timeout, 
-                                    ultrasonic_info[i].i2c_addr);
-        devices[i]->advertise(nh);
+        devices[i] = new ultrasonic(i2c_timeout, ultrasonic_addr[i]);
     }
 
-    devices[7] = new imu(IMU_TOPIC_NAME, i2c_timeout, 0);
-    devices[7]->advertise(nh);
+    devices[7] = new imu(i2c_timeout, 0);
+    devices[8] = new gps(i2c_timeout, 0, gpsSerialPort);
+}
 
-    devices[8] = new gps(GPS_TOPIC_NAME, i2c_timeout, 0, gpsSerialPort);
-    devices[8] -> advertise(nh);
+void handle_callback()
+{
 
 }
 
@@ -64,11 +54,11 @@ void loop()
         // read sensor data via i2c
         dev->read();
         // publish sensor data via rosserial
-        dev->publish(nh);
+        dev->publish();
     }
 
     // handle callback
-    nh.spinOnce();
+    handle_callback();
 
     // just slowing things down.. not necessary
     delay(10);

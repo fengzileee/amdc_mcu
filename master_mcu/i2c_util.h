@@ -1,12 +1,8 @@
 #ifndef i2c_util_H
 #define i2c_util_H
 
-#include "custom_ros.h"
-#include <std_msgs/Int16.h>
-#include <std_msgs/Int16MultiArray.h>
 #include <LSM6.h> // IMU
 #include <LIS3MDL.h> // Magnetometer
-#include <std_msgs/Int32MultiArray.h>
 #include <NMEAGPS.h>
 #include <AltSoftSerial.h>
 
@@ -19,8 +15,6 @@
 class i2c_device
 {
     protected:
-        ros::Publisher *pub;
-        const char *topic_name;
         // time (in ms) to wait when requesting data from sensor
         uint16_t timeout;
         // The i2c address of the slave device
@@ -32,77 +26,55 @@ class i2c_device
         void read_bytes(void *data, int bytes_to_read);
 
     public:
-        i2c_device (const char *topic_name, uint16_t timeout, int addr)
-            : topic_name(topic_name), 
-              timeout(timeout),
+        i2c_device (uint16_t timeout, int addr)
+            : timeout(timeout),
               addr(addr) {}
 
-        // The function to read sensor data via the i2c bus
+        // The function to read sensor data
         virtual void read() = 0;
-        // The function to publish the sensor data via rosserial
-        virtual void publish(ros::NodeHandle &nh) = 0;
-        void advertise(ros::NodeHandle &nh)
-        {
-            nh.advertise(*pub);
-        }
+        // The function to publish the sensor data via custom_rosserial
+        virtual void publish() = 0;
 };
 
 class ultrasonic : public i2c_device
 {
     private:
-        std_msgs::Int16 msg;
-        uint16_t distance;
+        uint8_t distance;
+        uint8_t msg[2];
 
     public:
-        ultrasonic(const char *topic_name, uint16_t timeout, int addr)
-            : i2c_device(topic_name, timeout, addr)
+        ultrasonic(uint16_t timeout, int addr)
+            : i2c_device(timeout, addr)
         {
-            pub = new ros::Publisher(topic_name, &msg);
+
         }
 
         void read();
-        void publish(ros::NodeHandle &);
+        void publish();
 };
 
 class imu : public i2c_device
 {
     private:
-        // TODO
         LSM6 imu_data;
         LIS3MDL mag;
-        //LPS ps;
-        std_msgs::Int16MultiArray msg;
-
-        //https://github.com/pololu/lsm6-arduino/blob/master/examples/Serial/Serial.ino
-        //https://github.com/pololu/lis3mdl-arduino/blob/master/examples/Serial/Serial.ino
-        //https://github.com/pololu/lps-arduino/blob/master/examples/SerialMetric/SerialMetric.ino
+        int16_t msg[9];
 
     public:
-        imu(const char *topic_name, uint16_t timeout, int addr)
-            : i2c_device(topic_name, timeout, addr)
+        imu(uint16_t timeout, int addr)
+            : i2c_device(timeout, addr)
         {
-            // initialization of msg
-            msg.layout.dim = (std_msgs::MultiArrayDimension *)
-            malloc(sizeof(std_msgs::MultiArrayDimension));
-            msg.layout.dim[0].label = "height";
-            msg.layout.dim[0].size = 9;
-            msg.layout.dim[0].stride = 1; 
-            msg.layout.data_offset = 0;
-            msg.data = (int *)malloc(sizeof(int)*9);
-            msg.data_length = 9;
-
             // initialization of magnatometer and imu
             imu_data.init();
             mag.init();
             imu_data.enableDefault();
             mag.enableDefault();
-
-            // ROS publisher
-            pub = new ros::Publisher(topic_name, &msg);
+            imu_data.setTimeout(timeout);
+            mag.setTimeout(timeout);
         }
 
         void read();
-        void publish(ros::NodeHandle &);
+        void publish();
 };
 
 class gps : public i2c_device
@@ -110,33 +82,19 @@ class gps : public i2c_device
     private:
         AltSoftSerial port;
         NMEAGPS gps_data;
-        std_msgs::Int32MultiArray msg;
+        int32_t msg[5];
 
     public:
-        gps(const char *topic_name, uint16_t timeout, int addr, AltSoftSerial gps_port)
-            : i2c_device(topic_name, timeout, addr)
+        gps(uint16_t timeout, int addr, AltSoftSerial gps_port)
+            : i2c_device(timeout, addr)
         {
-            // ROS publisher
-            pub = new ros::Publisher(topic_name, &msg);
-
             // Soft Serial port for gps
             port = gps_port;
             port.begin(9600); // default baudrate of our GPS device
-
-            // initialize ROS msg
-            // latitude, longitude, altitude, status, service
-            msg.layout.dim = (std_msgs::MultiArrayDimension *) 
-                malloc(sizeof(std_msgs::MultiArrayDimension));
-            msg.layout.dim[0].label = "height"; 
-            msg.layout.dim[0].size = 5;
-            msg.layout.dim[0].stride = 1;
-            msg.layout.data_offset = 0; 
-            msg.data = (int32_t *) malloc(sizeof(int32_t)*5);
-            msg.data_length = 5;
         }
 
         void read();
-        void publish(ros::NodeHandle &);
+        void publish();
 };
 
 #endif
