@@ -80,9 +80,9 @@ void imu::publish()
 
 void gps::read()
 {
-    if (gps_data.available(port))
+    if (gps_data->available(*gps_port))
     {
-        gps_fix fix = gps_data.read();
+        gps_fix fix = gps_data->read();
         msg[0] = fix.latitudeL(); // scaled by 10,000,000
         msg[1] = fix.longitudeL(); // scaled by 10,000,000
         msg[2] = fix.altitude_cm();

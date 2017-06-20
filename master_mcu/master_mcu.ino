@@ -1,6 +1,6 @@
 #include <Wire.h>
+#include <NeoSWSerial.h>
 #include "i2c_util.h"
-#include <AltSoftSerial.h>
 
 const int 
 ultrasonic_addr[] =  // clockwise from btm left
@@ -15,16 +15,15 @@ ultrasonic_addr[] =  // clockwise from btm left
 // time (in ms) to wait when requesting data from sensor
 const uint16_t i2c_timeout = 10;
 
-// Taken from library example:
-//
-// AltSoftSerial always uses these pins:
-//
-// Board          Transmit  Receive   PWM Unusable
-// -----          --------  -------   ------------
-// Arduino Uno        9         8         10
-AltSoftSerial gpsSerialPort;
-
 i2c_device *devices[9];
+
+NeoSWSerial gps_port(8, 9);
+NMEAGPS gps_data;
+
+void gps_isr(uint8_t c)
+{
+    gps_data.handle(c);
+}
 
 void setup()
 {
@@ -39,7 +38,11 @@ void setup()
     }
 
     devices[7] = new imu(i2c_timeout, 0);
-    devices[8] = new gps(i2c_timeout, 0, gpsSerialPort);
+
+    // gps
+    gps_port.attachInterrupt(gps_isr);
+    gps_port.begin(9600);
+    devices[8] = new gps(i2c_timeout, 0, &gps_port, &gps_data);
 }
 
 void handle_callback()

@@ -4,7 +4,7 @@
 #include <LSM6.h> // IMU
 #include <LIS3MDL.h> // Magnetometer
 #include <NMEAGPS.h>
-#include <AltSoftSerial.h>
+#include <NeoSWSerial.h>
 
 // Each slave device will be an i2c_device which provides 2 core functions:
 // 1. read()
@@ -80,17 +80,16 @@ class imu : public i2c_device
 class gps : public i2c_device
 {
     private:
-        AltSoftSerial port;
-        NMEAGPS gps_data;
         int32_t msg[5];
+        NeoSWSerial *gps_port;
+        NMEAGPS *gps_data;
 
     public:
-        gps(uint16_t timeout, int addr, AltSoftSerial gps_port)
+        gps(uint16_t timeout, int addr, NeoSWSerial *port, NMEAGPS *gps_data)
             : i2c_device(timeout, addr)
         {
-            // Soft Serial port for gps
-            port = gps_port;
-            port.begin(9600); // default baudrate of our GPS device
+            this->gps_port = gps_port;
+            this->gps_data = gps_data;
         }
 
         void read();
