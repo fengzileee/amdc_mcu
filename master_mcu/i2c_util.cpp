@@ -23,7 +23,7 @@ void publish_msg(void *msg, uint8_t sz)
                            // total bytes sent: 4 + sz
 }
 
-void i2c_device::read_bytes(void *data, int bytes_to_read)
+int i2c_device::read_bytes(void *data, int bytes_to_read)
 {
     Wire.requestFrom(addr, bytes_to_read);
 
@@ -31,7 +31,7 @@ void i2c_device::read_bytes(void *data, int bytes_to_read)
     while (Wire.available() < bytes_to_read)
     {
         if (timeout > 0 && ((uint16_t) millis() - start) > timeout)
-            return;
+            return 0;
     }
 
     for (int i = 0; i < bytes_to_read; ++i)
@@ -39,17 +39,23 @@ void i2c_device::read_bytes(void *data, int bytes_to_read)
         unsigned char *recv = (unsigned char *) data;
         recv[i] = Wire.read();
     }
+    return bytes_to_read;
 }
 
 void ultrasonic::read()
 {
-    i2c_device::read_bytes(&distance, sizeof distance);
+    uint8_t buf[3];
+    int recv = i2c_device::read_bytes(buf, sizeof buf);
+    distance = buf[0] + (buf[1] << 8);
+    error_code = recv != 0 ? buf[2] : 5;
 }
 
 void ultrasonic::publish()
 {
     msg[0] = addr;
-    msg[1] = distance;
+    msg[1] = distance & 0xff;
+    msg[2] = (distance >> 8) & 0xff;
+    msg[3] = error_code;
     publish_msg(msg, sizeof msg);
 }
 

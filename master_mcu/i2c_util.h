@@ -23,7 +23,7 @@ class i2c_device
         // The i2c Wire library can only read/write a single byte at a time.
         // This is meant to be a wrapper function to read any arbitrary
         // data type.
-        void read_bytes(void *data, int bytes_to_read);
+        int read_bytes(void *data, int bytes_to_read);
 
     public:
         i2c_device (uint16_t timeout, int addr)
@@ -39,14 +39,15 @@ class i2c_device
 class ultrasonic : public i2c_device
 {
     private:
-        uint8_t distance;
-        uint8_t msg[2];
+        uint16_t distance;
+        uint8_t error_code;
+        uint8_t msg[4];
 
     public:
         ultrasonic(uint16_t timeout, int addr)
             : i2c_device(timeout, addr)
         {
-
+            error_code = 0;
         }
 
         void read();
