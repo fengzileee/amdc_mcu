@@ -49,6 +49,16 @@ int right_reverse_pwm_control;
 AltSoftSerial bt_serial;
 //HardwareSerial &bt_serial = Serial;
 
+void receive_callback(int c)
+{
+    // TODO
+}
+
+void request_callback()
+{
+    // TODO
+}
+
 void setup()
 {
     // Initialise everything and set to 0 speed
@@ -68,6 +78,9 @@ void setup()
     digitalWrite(ENABLE_RIGHT, HIGH);
 
     bt_serial.begin(9600);
+    Wire.begin(9);
+    Wire.onRequest(request_callback);
+    Wire.onReceive(receive_callback);
 
 #ifdef DEBUG
     Serial.begin(9600);
