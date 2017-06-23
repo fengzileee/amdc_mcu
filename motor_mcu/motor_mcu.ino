@@ -1,3 +1,4 @@
+#include <Wire.h>
 #include <AltSoftSerial.h>
 
 #define PWM_LEFT_FORWARD  5
@@ -22,9 +23,14 @@
 // TODO
 // 1. Remove Serial and add I2C support
 
+int mode;
+
 // Range of speed is [-230, 230]
-int left_spd;
-int right_spd;
+volatile int left_spd;
+volatile int right_spd;
+
+volatile int left_enable;
+volatile int right_enable;
 
 // Range of pwm control is [0, 230]
 // Forward is activated when speed is positive
@@ -33,6 +39,8 @@ int left_forward_pwm_control;
 int left_reverse_pwm_control;
 int right_forward_pwm_control;
 int right_reverse_pwm_control;
+
+volatile int update;
 
 // AltSoftSerial always uses these pins:
 //
@@ -52,11 +60,38 @@ AltSoftSerial bt_serial;
 void receive_callback(int c)
 {
     // TODO
+    if (Wire.available() == 6)
+    {
+        left_spd = Wire.read();
+        left_spd += Wire.read() << 8;
+        right_spd = Wire.read();
+        right_spd += Wire.read() << 8;
+        left_enable = Wire.read();
+        right_enable = Wire.read();
+        update = 1;
+#ifdef DEBUG
+        Serial.print("left spd ");
+        Serial.println(left_spd);
+        Serial.print("right spd ");
+        Serial.println(right_spd);
+        Serial.print("left enable ");
+        Serial.println(left_enable);
+        Serial.print("right enable ");
+        Serial.println(right_enable);
+#endif
+    }
 }
 
 void request_callback()
 {
     // TODO
+    Wire.write(left_spd & 0xff);         // left spd lower byte
+    Wire.write((left_spd >> 8) & 0xff);  // left spd upper byte
+    Wire.write(right_spd & 0xff);        // right spd lower byte
+    Wire.write((right_spd >> 8) & 0xff); // right spd upper byte
+    Wire.write(left_enable);
+    Wire.write(right_enable);
+    Wire.write(mode);
 }
 
 void setup()
@@ -103,7 +138,7 @@ void loop()
             left_spd = left_spd <= MIN_SPD_LIMIT ? MIN_SPD_LIMIT : left_spd;
             break;
         case LEFT_TOGGLE:
-            digitalWrite(ENABLE_LEFT, !digitalRead(ENABLE_LEFT));
+            left_enable = !left_enable;
             break;
         case RIGHT_FORWARD:
             right_spd += INTERVAL;
@@ -114,10 +149,16 @@ void loop()
             right_spd = right_spd <= MIN_SPD_LIMIT ? MIN_SPD_LIMIT : right_spd;
             break;
         case RIGHT_TOGGLE:
-            digitalWrite(ENABLE_RIGHT, !digitalRead(ENABLE_RIGHT));
+            right_enable = !right_enable;
             break;
         }
 
+        mode = 1;
+        update = 1;
+    }
+
+    if (update == 1)
+    {
         left_forward_pwm_control = left_spd > 0 ? left_spd : 0;
         left_reverse_pwm_control = left_spd < 0 ? -left_spd : 0;
         right_forward_pwm_control = right_spd > 0 ? right_spd : 0;
@@ -127,23 +168,28 @@ void loop()
         analogWrite(PWM_LEFT_REVERSE, left_reverse_pwm_control);
         analogWrite(PWM_RIGHT_FORWARD, right_forward_pwm_control);
         analogWrite(PWM_RIGHT_REVERSE, right_reverse_pwm_control);
-        
-#ifdef DEBUG
-        Serial.print("left propeller ");
-        Serial.println(left_spd);
-        Serial.print("left_forward_pwm_control ");
-        Serial.println(left_forward_pwm_control);
-        Serial.print("left_reverse_pwm_control ");
-        Serial.println(left_reverse_pwm_control);
-        
-        Serial.print("right propeller ");
-        Serial.println(right_spd);
-        Serial.print("right_forward_pwm_control ");
-        Serial.println(right_forward_pwm_control);
-        Serial.print("right_reverse_pwm_control ");
-        Serial.println(right_reverse_pwm_control);
-#endif
+
+        digitalWrite(ENABLE_LEFT, left_enable);
+        digitalWrite(ENABLE_RIGHT, right_enable);
+
+        update = 0;
     }
+    
+#ifdef DEBUG
+    Serial.print("left propeller ");
+    Serial.println(left_spd);
+    Serial.print("left_forward_pwm_control ");
+    Serial.println(left_forward_pwm_control);
+    Serial.print("left_reverse_pwm_control ");
+    Serial.println(left_reverse_pwm_control);
+    
+    Serial.print("right propeller ");
+    Serial.println(right_spd);
+    Serial.print("right_forward_pwm_control ");
+    Serial.println(right_forward_pwm_control);
+    Serial.print("right_reverse_pwm_control ");
+    Serial.println(right_reverse_pwm_control);
+#endif
     delay(1);
 }
 

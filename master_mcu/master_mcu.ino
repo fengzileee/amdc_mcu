@@ -15,7 +15,7 @@ ultrasonic_addr[] =  // clockwise from btm left
 // time (in ms) to wait when requesting data from sensor
 const uint16_t i2c_timeout = 10;
 
-i2c_device *devices[9];
+i2c_device *devices[10];
 
 NeoSWSerial gps_port(8, 9);
 NMEAGPS gps_data;
@@ -43,6 +43,8 @@ void setup()
     gps_port.attachInterrupt(gps_isr);
     gps_port.begin(9600);
     devices[8] = new gps(i2c_timeout, 0, &gps_port, &gps_data);
+
+    devices[9] = new propeller(i2c_timeout, 9);
 }
 
 void handle_callback()

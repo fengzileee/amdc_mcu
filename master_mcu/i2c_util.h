@@ -106,7 +106,7 @@ class propeller : public i2c_device
         int8_t right_enable;
         int8_t mode;
         int8_t error_code;
-        uint8_t msg[4];
+        uint8_t msg[8];
 
         void read_from_computer();
         void write_to_computer();
@@ -124,27 +124,23 @@ class propeller : public i2c_device
         void publish();
 };
 
-read_from_propeller_mcu()
+class servo : public i2c_device
 {
-    uint8_t buf[7];
-    int recv = i2c_device::read_bytes(buf, sizeof buf);
-    left_pwm = buf[0] + (buf[1] << 8);
-    right_pwm = buf[2] + (buf[3] << 8);
-    left_enable = buf[4];
-    right_enable = buf[5];
-    mode = buf[6];
-    error_code = recv == 0;
-}
+    private:
+        int16_t left_pwm;
+        int16_t right_pwm;
+        int8_t error_code;
+        uint8_t msg[4];
 
-write_to_propeller_mcu()
-{
-    Wire.beginTransmission(addr); // transmit to device #8
-    Wire.write('A');        // sends five bytes
-    Wire.write('B');              // sends one byte
-    Wire.write('C');              // sends one byte
-    Wire.write('\n');              // sends one byte
-    Wire.write('\r');              // sends one byte
-    Wire.endTransmission();    // stop transmitting
-}
+    public:
+        servo(uint16_t timeout, int addr)
+            : i2c_device(timeout, addr)
+        {
+
+        }
+
+        void read();
+        void publish();
+};
 
 #endif
