@@ -34,6 +34,9 @@ int left_reverse_pwm_control;
 int right_forward_pwm_control;
 int right_reverse_pwm_control;
 
+int left_enable = 1;
+int right_enable = 1;
+
 // AltSoftSerial always uses these pins:
 //
 // Board          Transmit  Receive   PWM Unusable
@@ -76,61 +79,62 @@ void setup()
 
 void loop()
 {
-    while (bt_serial.available())
+    if (bt_serial.available() >= 8)
     {
-        int recv = bt_serial.read();
-        switch (recv)
+        if (bt_serial.read() != 'A') // check header
         {
-        case LEFT_FORWARD:
-            left_spd += INTERVAL;
-            left_spd = left_spd >= MAX_SPD_LIMIT ? MAX_SPD_LIMIT : left_spd;
-            break;
-        case LEFT_REVERSE:
-            left_spd -= INTERVAL;
-            left_spd = left_spd <= MIN_SPD_LIMIT ? MIN_SPD_LIMIT : left_spd;
-            break;
-        case LEFT_TOGGLE:
-            digitalWrite(ENABLE_LEFT, !digitalRead(ENABLE_LEFT));
-            break;
-        case RIGHT_FORWARD:
-            right_spd += INTERVAL;
-            right_spd = right_spd >= MAX_SPD_LIMIT ? MAX_SPD_LIMIT : right_spd;
-            break;
-        case RIGHT_REVERSE:
-            right_spd -= INTERVAL;
-            right_spd = right_spd <= MIN_SPD_LIMIT ? MIN_SPD_LIMIT : right_spd;
-            break;
-        case RIGHT_TOGGLE:
-            digitalWrite(ENABLE_RIGHT, !digitalRead(ENABLE_RIGHT));
-            break;
+#ifdef DEBUG
+            Serial.println("Wrong header");
+#endif
+            return;
         }
+        left_forward_pwm_control = bt_serial.read();
+        left_reverse_pwm_control = bt_serial.read();
+        right_forward_pwm_control = bt_serial.read();
+        right_reverse_pwm_control = bt_serial.read();
+        left_enable = bt_serial.read();
+        right_enable = bt_serial.read();
+        int recv_lrc = bt_serial.read();
 
-        left_forward_pwm_control = left_spd > 0 ? left_spd : 0;
-        left_reverse_pwm_control = left_spd < 0 ? -left_spd : 0;
-        right_forward_pwm_control = right_spd > 0 ? right_spd : 0;
-        right_reverse_pwm_control = right_spd < 0 ? -right_spd : 0;
+        uint8_t lrc = left_forward_pwm_control +
+                      left_reverse_pwm_control +
+                      right_forward_pwm_control +
+                      right_reverse_pwm_control +
+                      left_enable +
+                      right_enable;
+        lrc = -lrc;
+        if (lrc != recv_lrc)
+        {
+#ifdef DEBUG
+            Serial.println("wrong checksum");
+#endif
+            return;
+        }
 
         analogWrite(PWM_LEFT_FORWARD, left_forward_pwm_control);
         analogWrite(PWM_LEFT_REVERSE, left_reverse_pwm_control);
         analogWrite(PWM_RIGHT_FORWARD, right_forward_pwm_control);
         analogWrite(PWM_RIGHT_REVERSE, right_reverse_pwm_control);
-        
+        digitalWrite(ENABLE_LEFT, left_enable);
+        digitalWrite(ENABLE_RIGHT, right_enable);
+
 #ifdef DEBUG
-        Serial.print("left propeller ");
-        Serial.println(left_spd);
         Serial.print("left_forward_pwm_control ");
         Serial.println(left_forward_pwm_control);
         Serial.print("left_reverse_pwm_control ");
         Serial.println(left_reverse_pwm_control);
+        Serial.print("left_enable ");
+        Serial.println(left_enable);
         
-        Serial.print("right propeller ");
-        Serial.println(right_spd);
         Serial.print("right_forward_pwm_control ");
         Serial.println(right_forward_pwm_control);
         Serial.print("right_reverse_pwm_control ");
         Serial.println(right_reverse_pwm_control);
+        Serial.print("right_enable ");
+        Serial.println(right_enable);
 #endif
     }
+
     delay(1);
 }
 
