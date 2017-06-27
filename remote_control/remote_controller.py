@@ -98,13 +98,13 @@ class App:
         checksum = sum(pwm) + 1 + 1
         checksum = ((checksum & 0xff) ^ 0xff) + 1
         self.sock.send('A')
-        self.sock.send(pwm[0])
-        self.sock.send(pwm[1])
-        self.sock.send(pwm[2])
-        self.sock.send(pwm[3])
-        self.sock.send(1)
-        self.sock.send(1)
-        self.sock.send(checksum)
+        self.sock.send(str(bytearray([pwm[0]])))
+        self.sock.send(str(bytearray([pwm[1]])))
+        self.sock.send(str(bytearray([pwm[2]])))
+        self.sock.send(str(bytearray([pwm[3]])))
+        self.sock.send(str(bytearray([1])))
+        self.sock.send(str(bytearray([1])))
+        self.sock.send(str(bytearray([checksum])))
         print pwm, checksum
 
         self.canvas.coords(self.knob, *new_pos)
@@ -115,13 +115,13 @@ class App:
         # TODO
         # send 0,0,0,0 to motor_mcu
         self.sock.send('A')
-        self.sock.send(0)
-        self.sock.send(0)
-        self.sock.send(0)
-        self.sock.send(0)
-        self.sock.send(0)
-        self.sock.send(0)
-        self.sock.send(0)
+        self.sock.send(str(bytearray([0])))
+        self.sock.send(str(bytearray([0])))
+        self.sock.send(str(bytearray([0])))
+        self.sock.send(str(bytearray([0])))
+        self.sock.send(str(bytearray([0])))
+        self.sock.send(str(bytearray([0])))
+        self.sock.send(str(bytearray([0])))
 
 def bluetooth_init():
     try:
