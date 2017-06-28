@@ -109,34 +109,44 @@ void gps::publish()
 
 void propeller::read_from_computer()
 {
-    uint8_t recv;
+    uint8_t buf[6];
+    uint8_t lrc = 0;
 
-    // XXX
-    // hack for now
-    // Header
-    // left_pwm
-    // right_pwm
-    // left_enable
-    // right_enable
-    // checksum
-    if (Serial.available() == 8)
+    if (Serial.available() >= 8)
     {
         if (Serial.read() != 'A')
-            return; // TODO set error_code
+        {
+            error_code = 2;
+            return;
+        }
 
-        left_pwm = Serial.read();
-        left_pwm += Serial.read() << 8;
+        for (int i = 0; i < sizeof buf; ++i)
+        {
+            buf[i] = Serial.read();
+            lrc += buf[i];
+        }
 
-        right_pwm = Serial.read();
-        right_pwm += Serial.read() << 8;
+        lrc = -lrc;
+        if (lrc != Serial.read())
+        {
+            error_code = 4;
+            return;
+        }
 
-        left_enable = Serial.read();
-        right_enable = Serial.read();
+        left_pwm = buf[0];
+        left_pwm += buf[1] << 8;
+
+        right_pwm = buf[2];
+        right_pwm += buf[3] << 8;
+
+        left_enable = buf[4];
+        right_enable = buf[5];
+        
+        error_code = 0;
     }
     else if (Serial.available() > 0)
     {
-        // TODO
-        // set error_code?
+        error_code = 6;
     }
 }
 
@@ -162,10 +172,7 @@ void propeller::read_from_propeller_mcu()
     left_enable = buf[4];
     right_enable = buf[5];
     mode = buf[6];
-    // TODO
-    // can be more comprehensive
-    // eg. was there error in receiving data from computer?
-    error_code = recv == 0;
+    error_code = recv == 0 ? error_code | 1 : error_code;
 }
 
 void propeller::write_to_propeller_mcu()
