@@ -43,23 +43,13 @@ int right_reverse_pwm_control;
 volatile int update;
 
 // AltSoftSerial always uses these pins:
-//
 // Board          Transmit  Receive   PWM Unusable
 // -----          --------  -------   ------------
-// Teensy 3.0 & 3.1  21        20         22
-// Teensy 2.0         9        10       (none)
-// Teensy++ 2.0      25         4       26, 27
 // Arduino Uno        9         8         10
-// Arduino Leonardo   5        13       (none)
-// Arduino Mega      46        48       44, 45
-// Wiring-S           5         6          4
-// Sanguino          13        14         12
 AltSoftSerial bt_serial;
-//HardwareSerial &bt_serial = Serial;
 
 void receive_callback(int c)
 {
-    // TODO
     if (Wire.available() == 6)
     {
         left_spd = Wire.read();
@@ -69,22 +59,11 @@ void receive_callback(int c)
         left_enable = Wire.read();
         right_enable = Wire.read();
         update = 1;
-#ifdef DEBUG
-        Serial.print("left spd ");
-        Serial.println(left_spd);
-        Serial.print("right spd ");
-        Serial.println(right_spd);
-        Serial.print("left enable ");
-        Serial.println(left_enable);
-        Serial.print("right enable ");
-        Serial.println(right_enable);
-#endif
     }
 }
 
 void request_callback()
 {
-    // TODO
     Wire.write(left_spd & 0xff);         // left spd lower byte
     Wire.write((left_spd >> 8) & 0xff);  // left spd upper byte
     Wire.write(right_spd & 0xff);        // right spd lower byte
@@ -173,23 +152,23 @@ void loop()
         digitalWrite(ENABLE_RIGHT, right_enable);
 
         update = 0;
-    }
     
 #ifdef DEBUG
-    Serial.print("left propeller ");
-    Serial.println(left_spd);
-    Serial.print("left_forward_pwm_control ");
-    Serial.println(left_forward_pwm_control);
-    Serial.print("left_reverse_pwm_control ");
-    Serial.println(left_reverse_pwm_control);
-    
-    Serial.print("right propeller ");
-    Serial.println(right_spd);
-    Serial.print("right_forward_pwm_control ");
-    Serial.println(right_forward_pwm_control);
-    Serial.print("right_reverse_pwm_control ");
-    Serial.println(right_reverse_pwm_control);
+        Serial.print("left propeller ");
+        Serial.println(left_spd);
+        Serial.print("left_forward_pwm_control ");
+        Serial.println(left_forward_pwm_control);
+        Serial.print("left_reverse_pwm_control ");
+        Serial.println(left_reverse_pwm_control);
+        
+        Serial.print("right propeller ");
+        Serial.println(right_spd);
+        Serial.print("right_forward_pwm_control ");
+        Serial.println(right_forward_pwm_control);
+        Serial.print("right_reverse_pwm_control ");
+        Serial.println(right_reverse_pwm_control);
+        delay(100);
 #endif
-    delay(1);
+    }
 }
 
