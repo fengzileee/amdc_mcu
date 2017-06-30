@@ -20,17 +20,18 @@
 #define MAX_SPD_LIMIT 230
 #define MIN_SPD_LIMIT -230
 
-// TODO
-// 1. Remove Serial and add I2C support
-
-int mode;
-
 // Range of speed is [-230, 230]
 volatile int left_spd;
 volatile int right_spd;
 
 volatile int left_enable;
 volatile int right_enable;
+
+// specify whether to update motor command or not
+volatile int update;
+
+// 1 means manual, 0 means auto
+volatile int mode;
 
 // Range of pwm control is [0, 230]
 // Forward is activated when speed is positive
@@ -40,25 +41,39 @@ int left_reverse_pwm_control;
 int right_forward_pwm_control;
 int right_reverse_pwm_control;
 
-volatile int update;
-
 // AltSoftSerial always uses these pins:
 // Board          Transmit  Receive   PWM Unusable
 // -----          --------  -------   ------------
 // Arduino Uno        9         8         10
 AltSoftSerial bt_serial;
 
+#ifdef DEBUG
+  #define debug_println(X) Serial.println(X);
+  #define debug_print(X) Serial.print(X);
+#else
+  #define debug_println(X)
+  #define debug_print(X)
+#endif
+
 void receive_callback(int c)
 {
-    if (Wire.available() == 6)
+    uint8_t buf[6];
+    if (Wire.available() == sizeof buf)
     {
-        left_spd = Wire.read();
-        left_spd += Wire.read() << 8;
-        right_spd = Wire.read();
-        right_spd += Wire.read() << 8;
-        left_enable = Wire.read();
-        right_enable = Wire.read();
-        update = 1;
+        for (int i = 0; i < sizeof buf; ++i)
+            buf[i] = Wire.read();
+
+        // don't update using motor command from controller if in manual mode
+        if (mode == 0)
+        {
+            left_spd = buf[0];
+            left_spd += buf[1] << 8;
+            right_spd = buf[2];
+            right_spd += buf[3] << 8;
+            left_enable = buf[4];
+            right_enable = buf[5];
+            update = 1;
+        }
     }
 }
 
@@ -103,35 +118,37 @@ void setup()
 
 void loop()
 {
-    while (bt_serial.available())
+    uint8_t buf[6];
+    uint8_t lrc = 0;
+
+    if (bt_serial.available() >= sizeof buf + 2)
     {
-        int recv = bt_serial.read();
-        switch (recv)
+        if (bt_serial.read() != 'A') // check header
         {
-        case LEFT_FORWARD:
-            left_spd += INTERVAL;
-            left_spd = left_spd >= MAX_SPD_LIMIT ? MAX_SPD_LIMIT : left_spd;
-            break;
-        case LEFT_REVERSE:
-            left_spd -= INTERVAL;
-            left_spd = left_spd <= MIN_SPD_LIMIT ? MIN_SPD_LIMIT : left_spd;
-            break;
-        case LEFT_TOGGLE:
-            left_enable = !left_enable;
-            break;
-        case RIGHT_FORWARD:
-            right_spd += INTERVAL;
-            right_spd = right_spd >= MAX_SPD_LIMIT ? MAX_SPD_LIMIT : right_spd;
-            break;
-        case RIGHT_REVERSE:
-            right_spd -= INTERVAL;
-            right_spd = right_spd <= MIN_SPD_LIMIT ? MIN_SPD_LIMIT : right_spd;
-            break;
-        case RIGHT_TOGGLE:
-            right_enable = !right_enable;
-            break;
+            // TODO report error to master mcu
+            debug_println("Wrong header");
+            return;
         }
 
+        for (int i = 0; i < sizeof buf - 1; ++i)
+        {
+            buf[i] = bt_serial.read();
+            lrc += buf[i];
+        }
+        lrc = -lrc;
+
+        if (lrc != bt_serial.read())
+        {
+            debug_println("wrong checksum");
+            return;
+        }
+
+        left_spd = buf[0] - buf[1];
+        right_spd = buf[2] - buf[3];
+        left_enable = buf[4];
+        right_enable = buf[5];
+
+        // TODO allow remote controller to set mode back to auto
         mode = 1;
         update = 1;
     }
@@ -147,28 +164,23 @@ void loop()
         analogWrite(PWM_LEFT_REVERSE, left_reverse_pwm_control);
         analogWrite(PWM_RIGHT_FORWARD, right_forward_pwm_control);
         analogWrite(PWM_RIGHT_REVERSE, right_reverse_pwm_control);
-
         digitalWrite(ENABLE_LEFT, left_enable);
         digitalWrite(ENABLE_RIGHT, right_enable);
 
+        debug_print("left_forward_pwm_control ");
+        debug_println(left_forward_pwm_control);
+        debug_print("left_reverse_pwm_control ");
+        debug_println(left_reverse_pwm_control);
+        debug_print("left_enable ");
+        debug_println(left_enable);
+        debug_print("right_forward_pwm_control ");
+        debug_println(right_forward_pwm_control);
+        debug_print("right_reverse_pwm_control ");
+        debug_println(right_reverse_pwm_control);
+        debug_print("right_enable ");
+        debug_println(right_enable);
+
         update = 0;
-    
-#ifdef DEBUG
-        Serial.print("left propeller ");
-        Serial.println(left_spd);
-        Serial.print("left_forward_pwm_control ");
-        Serial.println(left_forward_pwm_control);
-        Serial.print("left_reverse_pwm_control ");
-        Serial.println(left_reverse_pwm_control);
-        
-        Serial.print("right propeller ");
-        Serial.println(right_spd);
-        Serial.print("right_forward_pwm_control ");
-        Serial.println(right_forward_pwm_control);
-        Serial.print("right_reverse_pwm_control ");
-        Serial.println(right_reverse_pwm_control);
-        delay(100);
-#endif
     }
 }
 
