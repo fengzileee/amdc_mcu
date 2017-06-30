@@ -1,3 +1,4 @@
+#include <Wire.h>
 #include <AltSoftSerial.h>
 
 #define PWM_LEFT_FORWARD  5
@@ -19,12 +20,18 @@
 #define MAX_SPD_LIMIT 230
 #define MIN_SPD_LIMIT -230
 
-// TODO
-// 1. Remove Serial and add I2C support
-
 // Range of speed is [-230, 230]
-int left_spd;
-int right_spd;
+volatile int left_spd;
+volatile int right_spd;
+
+volatile int left_enable;
+volatile int right_enable;
+
+// specify whether to update motor command or not
+volatile int update;
+
+// 1 means manual, 0 means auto
+volatile int mode;
 
 // Range of pwm control is [0, 230]
 // Forward is activated when speed is positive
@@ -34,23 +41,52 @@ int left_reverse_pwm_control;
 int right_forward_pwm_control;
 int right_reverse_pwm_control;
 
-int left_enable = 1;
-int right_enable = 1;
-
 // AltSoftSerial always uses these pins:
-//
 // Board          Transmit  Receive   PWM Unusable
 // -----          --------  -------   ------------
-// Teensy 3.0 & 3.1  21        20         22
-// Teensy 2.0         9        10       (none)
-// Teensy++ 2.0      25         4       26, 27
 // Arduino Uno        9         8         10
-// Arduino Leonardo   5        13       (none)
-// Arduino Mega      46        48       44, 45
-// Wiring-S           5         6          4
-// Sanguino          13        14         12
 AltSoftSerial bt_serial;
-//HardwareSerial &bt_serial = Serial;
+
+#ifdef DEBUG
+  #define debug_println(X) Serial.println(X);
+  #define debug_print(X) Serial.print(X);
+#else
+  #define debug_println(X)
+  #define debug_print(X)
+#endif
+
+void receive_callback(int c)
+{
+    uint8_t buf[6];
+    if (Wire.available() == sizeof buf)
+    {
+        for (int i = 0; i < sizeof buf; ++i)
+            buf[i] = Wire.read();
+
+        // don't update using motor command from controller if in manual mode
+        if (mode == 0)
+        {
+            left_spd = buf[0];
+            left_spd += buf[1] << 8;
+            right_spd = buf[2];
+            right_spd += buf[3] << 8;
+            left_enable = buf[4];
+            right_enable = buf[5];
+            update = 1;
+        }
+    }
+}
+
+void request_callback()
+{
+    Wire.write(left_spd & 0xff);         // left spd lower byte
+    Wire.write((left_spd >> 8) & 0xff);  // left spd upper byte
+    Wire.write(right_spd & 0xff);        // right spd lower byte
+    Wire.write((right_spd >> 8) & 0xff); // right spd upper byte
+    Wire.write(left_enable);
+    Wire.write(right_enable);
+    Wire.write(mode);
+}
 
 void setup()
 {
@@ -71,6 +107,9 @@ void setup()
     digitalWrite(ENABLE_RIGHT, HIGH);
 
     bt_serial.begin(9600);
+    Wire.begin(9);
+    Wire.onRequest(request_callback);
+    Wire.onReceive(receive_callback);
 
 #ifdef DEBUG
     Serial.begin(9600);
@@ -79,37 +118,47 @@ void setup()
 
 void loop()
 {
-    if (bt_serial.available() >= 8)
+    uint8_t buf[6];
+    uint8_t lrc = 0;
+
+    if (bt_serial.available() >= sizeof buf + 2)
     {
         if (bt_serial.read() != 'A') // check header
         {
-#ifdef DEBUG
-            Serial.println("Wrong header");
-#endif
+            // TODO report error to master mcu
+            debug_println("Wrong header");
             return;
         }
-        left_forward_pwm_control = bt_serial.read();
-        left_reverse_pwm_control = bt_serial.read();
-        right_forward_pwm_control = bt_serial.read();
-        right_reverse_pwm_control = bt_serial.read();
-        left_enable = bt_serial.read();
-        right_enable = bt_serial.read();
-        int recv_lrc = bt_serial.read();
 
-        uint8_t lrc = left_forward_pwm_control +
-                      left_reverse_pwm_control +
-                      right_forward_pwm_control +
-                      right_reverse_pwm_control +
-                      left_enable +
-                      right_enable;
-        lrc = -lrc;
-        if (lrc != recv_lrc)
+        for (int i = 0; i < sizeof buf - 1; ++i)
         {
-#ifdef DEBUG
-            Serial.println("wrong checksum");
-#endif
+            buf[i] = bt_serial.read();
+            lrc += buf[i];
+        }
+        lrc = -lrc;
+
+        if (lrc != bt_serial.read())
+        {
+            debug_println("wrong checksum");
             return;
         }
+
+        left_spd = buf[0] - buf[1];
+        right_spd = buf[2] - buf[3];
+        left_enable = buf[4];
+        right_enable = buf[5];
+
+        // TODO allow remote controller to set mode back to auto
+        mode = 1;
+        update = 1;
+    }
+
+    if (update == 1)
+    {
+        left_forward_pwm_control = left_spd > 0 ? left_spd : 0;
+        left_reverse_pwm_control = left_spd < 0 ? -left_spd : 0;
+        right_forward_pwm_control = right_spd > 0 ? right_spd : 0;
+        right_reverse_pwm_control = right_spd < 0 ? -right_spd : 0;
 
         analogWrite(PWM_LEFT_FORWARD, left_forward_pwm_control);
         analogWrite(PWM_LEFT_REVERSE, left_reverse_pwm_control);
@@ -118,23 +167,20 @@ void loop()
         digitalWrite(ENABLE_LEFT, left_enable);
         digitalWrite(ENABLE_RIGHT, right_enable);
 
-#ifdef DEBUG
-        Serial.print("left_forward_pwm_control ");
-        Serial.println(left_forward_pwm_control);
-        Serial.print("left_reverse_pwm_control ");
-        Serial.println(left_reverse_pwm_control);
-        Serial.print("left_enable ");
-        Serial.println(left_enable);
-        
-        Serial.print("right_forward_pwm_control ");
-        Serial.println(right_forward_pwm_control);
-        Serial.print("right_reverse_pwm_control ");
-        Serial.println(right_reverse_pwm_control);
-        Serial.print("right_enable ");
-        Serial.println(right_enable);
-#endif
-    }
+        debug_print("left_forward_pwm_control ");
+        debug_println(left_forward_pwm_control);
+        debug_print("left_reverse_pwm_control ");
+        debug_println(left_reverse_pwm_control);
+        debug_print("left_enable ");
+        debug_println(left_enable);
+        debug_print("right_forward_pwm_control ");
+        debug_println(right_forward_pwm_control);
+        debug_print("right_reverse_pwm_control ");
+        debug_println(right_reverse_pwm_control);
+        debug_print("right_enable ");
+        debug_println(right_enable);
 
-    delay(1);
+        update = 0;
+    }
 }
 

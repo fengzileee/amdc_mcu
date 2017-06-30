@@ -97,4 +97,103 @@ class gps : public i2c_device
         void publish();
 };
 
+class propeller : public i2c_device
+{
+    private:
+        int16_t left_pwm;
+        int16_t right_pwm;
+        int8_t left_enable;
+        int8_t right_enable;
+        int8_t mode;
+        int8_t error_code;
+        uint8_t msg[8];
+
+        void read_from_computer();
+        void write_to_computer();
+        void read_from_propeller_mcu();
+        void write_to_propeller_mcu();
+
+    public:
+        propeller(uint16_t timeout, int addr)
+            : i2c_device(timeout, addr)
+        {
+
+        }
+
+        void read();
+        void publish();
+};
+
+class servo : public i2c_device
+{
+    private:
+        int16_t left_pwm;
+        int16_t right_pwm;
+        int8_t error_code;
+        uint8_t msg[4];
+
+    public:
+        servo(uint16_t timeout, int addr)
+            : i2c_device(timeout, addr)
+        {
+
+        }
+
+        void read();
+        void publish();
+};
+
+class BufferedSerial
+{
+    private:
+        uint8_t start_idx;
+        uint8_t end_idx;
+        uint8_t diff;
+        // buffer size must be greater than or equal to 256
+        uint8_t buffer[256];
+    public:
+        BufferedSerial():
+          start_idx(0),
+          end_idx(0),
+          diff(0) {}
+
+        int available()
+        {
+            while (Serial.available())
+            {
+                buffer[end_idx++] = Serial.read();
+                diff++;
+            }
+            return diff;
+        }
+
+        void fetch()
+        {
+            while (Serial.available())
+            {
+                buffer[end_idx++] = Serial.read();
+                diff++;
+            }
+        }
+
+        int read()
+        {
+            diff--;
+            return buffer[start_idx++];
+        }
+
+        int read(void *buf, int sz)
+        {
+            uint8_t *c_buf = (uint8_t *) buf;
+            int i;
+            for (i = 0; i < sz && i < diff; ++i)
+                c_buf[i] = buffer[start_idx++];
+            diff -= i;
+            return i;
+        }
+
+};
+
+extern BufferedSerial bufserial;
+
 #endif
