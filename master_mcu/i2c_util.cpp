@@ -107,28 +107,31 @@ void gps::publish()
     publish_msg(msg, sizeof msg);
 }
 
+
 void propeller::read_from_computer()
 {
     uint8_t buf[6];
     uint8_t lrc = 0;
 
-    if (Serial.available() >= 8)
+    if (bufserial.available() >= 8)
     {
-        if (Serial.read() != 'A')
+        if (bufserial.read() != 'A')
         {
+            // message not received in correct sequence
             error_code = 2;
             return;
         }
 
+        bufserial.read(buf, sizeof buf);
         for (int i = 0; i < sizeof buf; ++i)
         {
-            buf[i] = Serial.read();
             lrc += buf[i];
         }
-
         lrc = -lrc;
-        if (lrc != Serial.read())
+
+        if (lrc != bufserial.read())
         {
+            // incorrect checksum
             error_code = 4;
             return;
         }
@@ -144,8 +147,9 @@ void propeller::read_from_computer()
         
         error_code = 0;
     }
-    else if (Serial.available() > 0)
+    else if (bufserial.available() > 0)
     {
+        // not receiving full message
         error_code = 6;
     }
 }

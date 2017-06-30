@@ -143,4 +143,57 @@ class servo : public i2c_device
         void publish();
 };
 
+class BufferedSerial
+{
+    private:
+        uint8_t start_idx;
+        uint8_t end_idx;
+        uint8_t diff;
+        // buffer size must be greater than or equal to 256
+        uint8_t buffer[256];
+    public:
+        BufferedSerial():
+          start_idx(0),
+          end_idx(0),
+          diff(0) {}
+
+        int available()
+        {
+            while (Serial.available())
+            {
+                buffer[end_idx++] = Serial.read();
+                diff++;
+            }
+            return diff;
+        }
+
+        void fetch()
+        {
+            while (Serial.available())
+            {
+                buffer[end_idx++] = Serial.read();
+                diff++;
+            }
+        }
+
+        int read()
+        {
+            diff--;
+            return buffer[start_idx++];
+        }
+
+        int read(void *buf, int sz)
+        {
+            uint8_t *c_buf = (uint8_t *) buf;
+            int i;
+            for (i = 0; i < sz && i < diff; ++i)
+                c_buf[i] = buffer[start_idx++];
+            diff -= i;
+            return i;
+        }
+
+};
+
+extern BufferedSerial bufserial;
+
 #endif
