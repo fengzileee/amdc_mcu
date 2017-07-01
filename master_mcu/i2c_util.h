@@ -100,10 +100,12 @@ class gps : public i2c_device
 class propeller : public i2c_device
 {
     private:
-        int16_t left_pwm;
-        int16_t right_pwm;
-        int8_t left_enable;
-        int8_t right_enable;
+        struct {
+            int16_t left_pwm;
+            int16_t right_pwm;
+            int8_t left_enable;
+            int8_t right_enable;
+        } cmd, feedback;
         int8_t mode;
         int8_t error_code;
         uint8_t msg[8];

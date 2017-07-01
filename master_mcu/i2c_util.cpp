@@ -136,14 +136,14 @@ void propeller::read_from_computer()
             return;
         }
 
-        left_pwm = buf[0];
-        left_pwm += buf[1] << 8;
+        cmd.left_pwm = buf[0];
+        cmd.left_pwm += buf[1] << 8;
 
-        right_pwm = buf[2];
-        right_pwm += buf[3] << 8;
+        cmd.right_pwm = buf[2];
+        cmd.right_pwm += buf[3] << 8;
 
-        left_enable = buf[4];
-        right_enable = buf[5];
+        cmd.left_enable = buf[4];
+        cmd.right_enable = buf[5];
         
         error_code = 0;
     }
@@ -156,12 +156,12 @@ void propeller::read_from_computer()
 
 void propeller::write_to_computer()
 {
-    msg[0] = left_pwm & 0xff;
-    msg[1] = (left_pwm >> 8) & 0xff;
-    msg[2] = right_pwm & 0xff;
-    msg[3] = (right_pwm >> 8) & 0xff;
-    msg[4] = left_enable;
-    msg[5] = right_enable;
+    msg[0] = feedback.left_pwm & 0xff;
+    msg[1] = (feedback.left_pwm >> 8) & 0xff;
+    msg[2] = feedback.right_pwm & 0xff;
+    msg[3] = (feedback.right_pwm >> 8) & 0xff;
+    msg[4] = feedback.left_enable;
+    msg[5] = feedback.right_enable;
     msg[6] = mode;
     msg[7] = error_code;
     publish_msg(msg, sizeof msg);
@@ -171,10 +171,10 @@ void propeller::read_from_propeller_mcu()
 {
     uint8_t buf[7];
     int recv = i2c_device::read_bytes(buf, sizeof buf);
-    left_pwm = buf[0] + (buf[1] << 8);
-    right_pwm = buf[2] + (buf[3] << 8);
-    left_enable = buf[4];
-    right_enable = buf[5];
+    feedback.left_pwm = buf[0] + (buf[1] << 8);
+    feedback.right_pwm = buf[2] + (buf[3] << 8);
+    feedback.left_enable = buf[4];
+    feedback.right_enable = buf[5];
     mode = buf[6];
     error_code = recv == 0 ? error_code | 1 : error_code;
 }
@@ -182,12 +182,12 @@ void propeller::read_from_propeller_mcu()
 void propeller::write_to_propeller_mcu()
 {
     Wire.beginTransmission(addr);
-    Wire.write(left_pwm & 0xff);         // left pwm lower byte
-    Wire.write((left_pwm >> 8) & 0xff);  // left pwm upper byte
-    Wire.write(right_pwm & 0xff);        // right pwm lower byte
-    Wire.write((right_pwm >> 8) & 0xff); // right pwm upper byte
-    Wire.write(left_enable);
-    Wire.write(right_enable);
+    Wire.write(cmd.left_pwm & 0xff);         // left pwm lower byte
+    Wire.write((cmd.left_pwm >> 8) & 0xff);  // left pwm upper byte
+    Wire.write(cmd.right_pwm & 0xff);        // right pwm lower byte
+    Wire.write((cmd.right_pwm >> 8) & 0xff); // right pwm upper byte
+    Wire.write(cmd.left_enable);
+    Wire.write(cmd.right_enable);
     Wire.endTransmission();
 }
 
