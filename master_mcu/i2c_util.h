@@ -117,7 +117,11 @@ class propeller : public i2c_device
 
     public:
         propeller(uint16_t timeout, int addr)
-            : i2c_device(timeout, addr)
+            : cmd({0,0,0,0}),
+              feedback({0,0,0,0}),
+              mode(0),
+              error_code(0),
+              i2c_device(timeout, addr)
         {
 
         }

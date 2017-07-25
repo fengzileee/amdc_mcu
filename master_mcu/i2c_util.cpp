@@ -171,12 +171,19 @@ void propeller::read_from_propeller_mcu()
 {
     uint8_t buf[7];
     int recv = i2c_device::read_bytes(buf, sizeof buf);
-    feedback.left_pwm = buf[0] + (buf[1] << 8);
-    feedback.right_pwm = buf[2] + (buf[3] << 8);
-    feedback.left_enable = buf[4];
-    feedback.right_enable = buf[5];
-    mode = buf[6];
-    error_code = recv == 0 ? error_code | 1 : error_code;
+    if (recv == sizeof buf)
+    {
+        feedback.left_pwm = buf[0] + (buf[1] << 8);
+        feedback.right_pwm = buf[2] + (buf[3] << 8);
+        feedback.left_enable = buf[4];
+        feedback.right_enable = buf[5];
+        mode = buf[6];
+        error_code &= 0xfe;
+    }
+    else
+    {
+        error_code |= 1;
+    }
 }
 
 void propeller::write_to_propeller_mcu()
