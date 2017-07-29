@@ -16,6 +16,8 @@ ultrasonic_addr[] =  // clockwise from btm left
 const uint16_t i2c_timeout = 2;
 
 i2c_device *devices[9];
+int dev_counter = 0;
+
 i2c_device *propeller_dev;
 
 NeoSWSerial gps_port(8, 9);
@@ -28,6 +30,11 @@ void gps_isr(uint8_t c)
     gps_data.handle(c);
 }
 
+void add_device(i2c_device *dev)
+{
+    devices[dev_counter++] = dev;
+}
+
 void setup()
 {
     // join I2C bus as master
@@ -37,27 +44,27 @@ void setup()
 
     for (int i = 0; i < 7; ++i)
     {
-        devices[i] = new ultrasonic(i2c_timeout, ultrasonic_addr[i]);
+        add_device(new ultrasonic(i2c_timeout, ultrasonic_addr[i]));
     }
 
-    devices[7] = new imu(i2c_timeout, 0);
+    add_device(new imu(i2c_timeout, 0));
 
     // gps
     gps_port.attachInterrupt(gps_isr);
     gps_port.begin(9600);
-    devices[8] = new gps(i2c_timeout, 0, &gps_port, &gps_data);
+    add_device(new gps(i2c_timeout, 0, &gps_port, &gps_data));
 
     propeller_dev = new propeller(i2c_timeout, 9);
 }
 
 void loop()
 {
-    for (auto dev : devices)
+    for (int i = 0; i < dev_counter; ++i)
     {
         // read sensor data via i2c
-        dev->read();
+        devices[i]->read();
         // publish sensor data to computer
-        dev->publish();
+        devices[i]->publish();
 
         // need to run this in every loop to clear up serial buffer
         propeller_dev->read();
