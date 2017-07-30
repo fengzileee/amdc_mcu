@@ -100,6 +100,14 @@ class gps : public i2c_device
 class propeller : public i2c_device
 {
     private:
+
+        void read_from_computer();
+        void write_to_computer();
+        void read_from_propeller_mcu();
+        void write_to_propeller_mcu();
+
+    public:
+
         struct {
             int16_t left_pwm;
             int16_t right_pwm;
@@ -110,12 +118,6 @@ class propeller : public i2c_device
         int8_t error_code;
         uint8_t msg[8];
 
-        void read_from_computer();
-        void write_to_computer();
-        void read_from_propeller_mcu();
-        void write_to_propeller_mcu();
-
-    public:
         propeller(uint16_t timeout, int addr)
             : cmd({0,0,0,0}),
               feedback({0,0,0,0}),
@@ -133,14 +135,26 @@ class propeller : public i2c_device
 class servo : public i2c_device
 {
     private:
-        int16_t left_pwm;
-        int16_t right_pwm;
+
+        const int LEFT_CLOSE_ANGLE = 60;
+        const int LEFT_OPEN_ANGLE = 112;
+        const int RIGHT_CLOSE_ANGLE = 170;
+        const int RIGHT_OPEN_ANGLE = 112;
+
+    public:
+
+        bool open;
+        int16_t left_angle;
+        int16_t right_angle;
         int8_t error_code;
         uint8_t msg[4];
 
-    public:
-        servo(uint16_t timeout, int addr)
-            : i2c_device(timeout, addr)
+        servo(uint16_t timeout, int addr):
+          open(false),
+          left_angle(LEFT_CLOSE_ANGLE),
+          right_angle(RIGHT_CLOSE_ANGLE),
+          error_code(0),
+          i2c_device(timeout, addr)
         {
 
         }

@@ -107,53 +107,6 @@ void gps::publish()
     publish_msg(msg, sizeof msg);
 }
 
-
-void propeller::read_from_computer()
-{
-    uint8_t buf[6];
-    uint8_t lrc = 0;
-
-    if (bufserial.available() >= 8)
-    {
-        if (bufserial.read() != 'A')
-        {
-            // message not received in correct sequence
-            error_code = 2;
-            return;
-        }
-
-        bufserial.read(buf, sizeof buf);
-        for (int i = 0; i < sizeof buf; ++i)
-        {
-            lrc += buf[i];
-        }
-        lrc = -lrc;
-
-        if (lrc != bufserial.read())
-        {
-            // incorrect checksum
-            error_code = 4;
-            return;
-        }
-
-        cmd.left_pwm = buf[0];
-        cmd.left_pwm += buf[1] << 8;
-
-        cmd.right_pwm = buf[2];
-        cmd.right_pwm += buf[3] << 8;
-
-        cmd.left_enable = buf[4];
-        cmd.right_enable = buf[5];
-        
-        error_code = 0;
-    }
-    else if (bufserial.available() > 0)
-    {
-        // not receiving full message
-        error_code = 6;
-    }
-}
-
 void propeller::write_to_computer()
 {
     msg[0] = feedback.left_pwm & 0xff;
@@ -200,12 +153,29 @@ void propeller::write_to_propeller_mcu()
 
 void propeller::read()
 {
-    read_from_computer();
-    write_to_propeller_mcu();
+    // get feedback
+    read_from_propeller_mcu();
+    write_to_computer();
 }
 
 void propeller::publish()
 {
-    read_from_propeller_mcu();
-    write_to_computer();
+    // send command
+    write_to_propeller_mcu();
+}
+
+void servo::read()
+{
+
+}
+
+void servo::publish()
+{
+    left_angle = open ? LEFT_OPEN_ANGLE : LEFT_CLOSE_ANGLE;
+    right_angle = open ? RIGHT_OPEN_ANGLE : RIGHT_CLOSE_ANGLE;
+
+    Wire.beginTransmission(addr);
+    Wire.write(left_angle);
+    Wire.write(right_angle);
+    Wire.endTransmission();
 }
